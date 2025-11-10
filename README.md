@@ -166,6 +166,7 @@ For issues or questions, please open an issue on GitHub.
 ## Roadmap
 
 Future features planned:
+- [ ] Recipe search function
 - [ ] Google Calendar integration
 - [ ] AI-powered recipe import from URLs
 - [ ] User authentication
