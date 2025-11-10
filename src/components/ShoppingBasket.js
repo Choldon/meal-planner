@@ -189,41 +189,72 @@ function ShoppingBasket({
               <div key={category} className="shopping-card">
                 <h3 className="card-title">{category}</h3>
                 <ul className="shopping-items">
-                  {items.map(item => (
-                    <li key={item.id} className={`shopping-item ${item.checked ? 'checked' : ''}`}>
-                      <label className="item-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={item.checked}
-                          onChange={() => onToggleItem(item.id)}
-                        />
-                        <span className={`item-text ${item.isRecipeItem ? 'recipe-item' : 'adhoc-item'}`}>
-                          {item.quantity.toFixed(1)} {item.unit} {item.ingredientName}
-                          {item.isRecipeItem && item.recipeName && (
-                            <span className="item-badge" title={`From: ${item.recipeName}`}>
-                              {item.recipeName}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                      <div className="item-actions">
-                        <button
-                          onClick={() => handleEditItem(item)}
-                          className="btn-edit-item"
-                          title="Edit quantity"
-                        >
-                          ✎
-                        </button>
-                        <button
-                          onClick={() => onDeleteItem(item.id)}
-                          className="btn-delete-item"
-                          title="Remove item"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </li>
-                  ))}
+                  {items.map(item => {
+                    // Parse recipe names and count occurrences
+                    let badgeText = '';
+                    if (item.recipeName) {
+                      const recipes = item.recipeName.split(',').map(r => r.trim());
+                      const recipeCounts = {};
+                      
+                      // Count each unique recipe
+                      recipes.forEach(recipe => {
+                        recipeCounts[recipe] = (recipeCounts[recipe] || 0) + 1;
+                      });
+                      
+                      // Build badge text
+                      const uniqueRecipes = Object.keys(recipeCounts);
+                      if (uniqueRecipes.length === 1) {
+                        // Single recipe (possibly multiple times)
+                        const count = recipeCounts[uniqueRecipes[0]];
+                        badgeText = count > 1 ? `${uniqueRecipes[0]} x${count}` : uniqueRecipes[0];
+                      } else {
+                        // Multiple different recipes
+                        badgeText = uniqueRecipes.map(recipe => {
+                          const count = recipeCounts[recipe];
+                          return count > 1 ? `${recipe} x${count}` : recipe;
+                        }).join(', ');
+                      }
+                    }
+
+                    return (
+                      <li key={item.id} className={`shopping-item ${item.checked ? 'checked' : ''}`}>
+                        <label className="item-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={item.checked}
+                            onChange={() => onToggleItem(item.id)}
+                          />
+                          <span className={`item-text ${item.isRecipeItem ? 'recipe-item' : 'adhoc-item'}`}>
+                            {item.quantity.toFixed(1)} {item.unit} {item.ingredientName}
+                            {item.isRecipeItem && badgeText && (
+                              <span
+                                className="item-badge"
+                                title={`From: ${item.recipeName}`}
+                              >
+                                {badgeText}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                        <div className="item-actions">
+                          <button
+                            onClick={() => handleEditItem(item)}
+                            className="btn-edit-item"
+                            title="Edit quantity"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => onDeleteItem(item.id)}
+                            className="btn-delete-item"
+                            title="Remove item"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );
