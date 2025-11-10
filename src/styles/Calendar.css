@@ -4,6 +4,7 @@
   padding: 30px;
   box-shadow: var(--shadow-lg);
   border: 2px solid var(--color-sage);
+  overflow-x: auto; /* Enable horizontal scroll on small screens */
 }
 
 .calendar-header {
@@ -64,6 +65,7 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: var(--shadow-md);
+  min-width: 800px; /* Prevent calendar from getting too narrow */
 }
 
 .calendar-row {
@@ -260,10 +262,16 @@
 @media (max-width: 768px) {
   .calendar-container {
     padding: 15px;
+    /* Horizontal scroll enabled by overflow-x: auto above */
+  }
+  
+  /* Keep calendar at readable size, don't shrink columns */
+  .calendar-grid {
+    min-width: 900px; /* Wider on mobile to keep cells readable */
   }
   
   .calendar-row {
-    grid-template-columns: 60px repeat(7, 1fr);
+    grid-template-columns: 80px repeat(7, 120px); /* Fixed widths for consistency */
   }
   
   .time-label, .day-header {
@@ -273,6 +281,27 @@
   
   .calendar-cell {
     padding: 8px;
-    min-height: 70px;
+    min-height: 80px;
+  }
+  
+  .meal-title {
+    font-size: 13px;
+  }
+  
+  .meal-people {
+    font-size: 11px;
+  }
+}
+
+/* Add scroll hint for mobile users */
+@media (max-width: 768px) {
+  .calendar-container::after {
+    content: '← Swipe to see all days →';
+    display: block;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 12px;
+    margin-top: 10px;
+    font-style: italic;
   }
 }
