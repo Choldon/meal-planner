@@ -1,0 +1,53 @@
+[
+  {
+    "id": 1,
+    "title": "Vegetable Lasagne",
+    "diet": "Vegetarian",
+    "servings": 4,
+    "prepTime": 30,
+    "cookTime": 45,
+    "ingredients": [
+      { "ingredientId": 1, "quantity": 2, "unit": "medium" },
+      { "ingredientId": 2, "quantity": 1, "unit": "large" },
+      { "ingredientId": 3, "quantity": 2, "unit": "cloves" },
+      { "ingredientId": 4, "quantity": 400, "unit": "g" },
+      { "ingredientId": 5, "quantity": 9, "unit": "sheets" },
+      { "ingredientId": 6, "quantity": 500, "unit": "ml" },
+      { "ingredientId": 7, "quantity": 200, "unit": "g" }
+    ],
+    "method": [
+      "Preheat oven to 180°C (160°C fan).",
+      "Dice courgettes and aubergine. Finely chop garlic.",
+      "Heat oil in a large pan and cook vegetables until soft.",
+      "Add chopped tomatoes and simmer for 15 minutes.",
+      "In a baking dish, layer: vegetable sauce, lasagne sheets, white sauce. Repeat.",
+      "Top with grated cheese.",
+      "Bake for 45 minutes until golden and bubbling."
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Chicken Stir Fry",
+    "diet": "Non-Vegetarian",
+    "servings": 2,
+    "prepTime": 15,
+    "cookTime": 15,
+    "ingredients": [
+      { "ingredientId": 8, "quantity": 300, "unit": "g" },
+      { "ingredientId": 9, "quantity": 1, "unit": "medium" },
+      { "ingredientId": 10, "quantity": 1, "unit": "medium" },
+      { "ingredientId": 3, "quantity": 2, "unit": "cloves" },
+      { "ingredientId": 11, "quantity": 2, "unit": "tbsp" },
+      { "ingredientId": 12, "quantity": 200, "unit": "g" }
+    ],
+    "method": [
+      "Slice chicken into strips.",
+      "Slice bell pepper and broccoli into bite-sized pieces.",
+      "Heat oil in a wok over high heat.",
+      "Cook chicken until golden, then remove.",
+      "Stir-fry vegetables for 3-4 minutes.",
+      "Return chicken to wok, add soy sauce.",
+      "Serve with rice."
+    ]
+  }
+]
