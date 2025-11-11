@@ -11,11 +11,11 @@ function Login() {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data, error} = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          scopes: 'https://www.googleapis.com/auth/calendar',
-          redirectTo: window.location.origin
+          scopes: 'https://www.googleapis.com/auth/calendar'
+          // redirectTo is handled automatically by Supabase Site URL configuration
         }
       });
 
