@@ -173,8 +173,8 @@ function AppContent() {
 
       if (error) throw error;
 
-      // Manually update local state since real-time might not be instant
-      setMeals(prev => [...prev, toCamelCase(data)]);
+      // Real-time subscription will automatically update the meals state
+      // No need to manually update here to avoid duplicates
 
       // Add recipe ingredients to shopping list
       const recipe = recipes.find(r => r.id === meal.recipeId);
@@ -221,7 +221,7 @@ function AppContent() {
         }
 
         if (shoppingItems.length > 0) {
-          const { data: insertedItems, error: insertError } = await supabase
+          const { error: insertError } = await supabase
             .from('shopping_list')
             .insert(shoppingItems)
             .select();
@@ -231,10 +231,8 @@ function AppContent() {
             throw insertError;
           }
 
-          // Manually update local state
-          if (insertedItems) {
-            setShoppingList(prev => [...prev, ...toCamelCase(insertedItems)]);
-          }
+          // Real-time subscription will automatically update the shopping list
+          // No need to manually update here to avoid duplicates
         }
       }
     } catch (error) {

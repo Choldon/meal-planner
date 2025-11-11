@@ -1,0 +1,123 @@
+/* Sync Status Indicator Styles */
+
+.sync-status-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  font-size: 0.85rem;
+}
+
+.sync-status-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sync-icon {
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sync-icon.syncing {
+  animation: rotate 2s linear infinite;
+}
+
+.sync-icon.success {
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.sync-icon.error {
+  color: #f44336;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-text {
+  font-weight: 500;
+  color: #333;
+}
+
+.sync-text.error {
+  color: #f44336;
+}
+
+.sync-status-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: #666;
+  padding-left: 1.5rem;
+}
+
+.sync-detail {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sync-detail.imported {
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.sync-detail.unmatched {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.sync-error-message {
+  padding: 0.5rem;
+  background-color: #ffebee;
+  border-left: 3px solid #f44336;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #c62828;
+  margin-top: 0.25rem;
+}
+
+/* Compact version for header */
+.sync-status-indicator.compact {
+  flex-direction: row;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: transparent;
+  border: none;
+}
+
+.sync-status-indicator.compact .sync-status-details {
+  padding-left: 0;
+  margin-left: auto;
+}
+
+.sync-status-indicator.compact .sync-error-message {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sync-status-indicator {
+    font-size: 0.8rem;
+  }
+
+  .sync-status-details {
+    font-size: 0.75rem;
+  }
+
+  .sync-icon {
+    font-size: 0.9rem;
+  }
+}
