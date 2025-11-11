@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { syncMealToCalendar, syncMealsToCalendar } from '../utils/googleCalendar';
+import { useAutoSync } from '../hooks/useAutoSync';
+import ImportModal from './ImportModal';
+import SyncStatusIndicator from './SyncStatusIndicator';
 import '../styles/Calendar.css';
 
 function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
@@ -9,10 +12,26 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
   const [showPersonSelector, setShowPersonSelector] = useState(false);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [showMealOptions, setShowMealOptions] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [editingMeal, setEditingMeal] = useState(null);
   const [syncing, setSyncing] = useState(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+
+  // Set up automatic background sync
+  const {
+    isSyncing: isAutoSyncing,
+    lastSyncTime,
+    syncError,
+    syncStats,
+    triggerSync
+  } = useAutoSync(autoSyncEnabled, 10, (results) => {
+    // Show notification when meals are auto-imported
+    if (results.created > 0) {
+      console.log(`Auto-sync: ${results.created} new meal(s) imported from Google Calendar`);
+    }
+  });
 
   // Get Monday of the current week
   function getMonday(date) {
@@ -223,20 +242,98 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
     }
   };
 
+  const handleImportFromCalendar = () => {
+    setShowImportModal(true);
+  };
+
+  const toggleAutoSync = () => {
+    setAutoSyncEnabled(!autoSyncEnabled);
+  };
+
+  const handleManualSync = () => {
+    triggerSync();
+  };
+
+  const handleImportComplete = (results) => {
+    setShowImportModal(false);
+    
+    let message = `Import complete!\n`;
+    message += `✅ Created: ${results.created}\n`;
+    if (results.skipped > 0) {
+      message += `⏭️ Skipped: ${results.skipped} (already exist)\n`;
+    }
+    if (results.unmatched > 0) {
+      message += `⚠️ Unmatched: ${results.unmatched} (saved for later)\n`;
+    }
+    if (results.failed > 0) {
+      message += `❌ Failed: ${results.failed}`;
+    }
+    
+    alert(message);
+    
+    // Real-time subscriptions in App.js will automatically update the meals
+    // No need to reload the page
+  };
+
+  // Calculate date range for current week
+  const getWeekDateRange = () => {
+    const startDate = currentWeekStart.toISOString().split('T')[0];
+    const endDate = new Date(currentWeekStart);
+    endDate.setDate(endDate.getDate() + 6);
+    return {
+      startDate,
+      endDate: endDate.toISOString().split('T')[0]
+    };
+  };
+
   return (
     <div className="calendar-container">
       <div className="calendar-header">
-        <h2>Weekly Meal Calendar</h2>
+        <div className="calendar-header-top">
+          <h2>Weekly Meal Calendar</h2>
+          <div className="calendar-sync-controls">
+            <button
+              onClick={toggleAutoSync}
+              className={`btn-auto-sync ${autoSyncEnabled ? 'active' : ''}`}
+              title={autoSyncEnabled ? 'Disable auto-sync' : 'Enable auto-sync'}
+            >
+              {autoSyncEnabled ? '🔄 Auto-sync ON' : '⏸️ Auto-sync OFF'}
+            </button>
+            <button
+              onClick={handleManualSync}
+              className="btn-manual-sync"
+              disabled={isAutoSyncing}
+              title="Sync now"
+            >
+              {isAutoSyncing ? '⏳' : '🔄'}
+            </button>
+          </div>
+        </div>
+
+        <SyncStatusIndicator
+          isSyncing={isAutoSyncing}
+          lastSyncTime={lastSyncTime}
+          syncError={syncError}
+          syncStats={syncStats}
+        />
+
         <div className="calendar-controls">
           <button onClick={goToPreviousWeek} className="btn-nav">← Previous</button>
           <button onClick={goToCurrentWeek} className="btn-today">Today</button>
           <button onClick={goToNextWeek} className="btn-nav">Next →</button>
           <button
+            onClick={handleImportFromCalendar}
+            className="btn-import"
+            disabled={syncing}
+          >
+            📥 Import from Calendar
+          </button>
+          <button
             onClick={handleSyncToCalendar}
             className="btn-sync"
             disabled={syncing}
           >
-            {syncing ? '⏳ Syncing...' : '📅 Sync to Google Calendar'}
+            {syncing ? '⏳ Syncing...' : '📅 Sync to Calendar'}
           </button>
         </div>
         <p className="week-range">{formatWeekRange()}</p>
@@ -392,6 +489,15 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
           </div>
         </div>
       )}
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        startDate={getWeekDateRange().startDate}
+        endDate={getWeekDateRange().endDate}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   );
 }
