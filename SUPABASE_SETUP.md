@@ -64,6 +64,7 @@ CREATE TABLE meals (
   meal_type TEXT NOT NULL,
   recipe_id BIGINT REFERENCES recipes(id) ON DELETE CASCADE,
   people JSONB NOT NULL,
+  calendar_event_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

@@ -21,9 +21,10 @@
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
-.btn-nav, .btn-today {
+.btn-nav, .btn-today, .btn-sync {
   padding: 10px 20px;
   border: 2px solid var(--color-sage);
   background: white;
@@ -35,7 +36,7 @@
   transition: all 0.3s ease;
 }
 
-.btn-nav:hover, .btn-today:hover {
+.btn-nav:hover, .btn-today:hover, .btn-sync:hover {
   background-color: var(--color-sage);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
@@ -52,6 +53,26 @@
   border-color: var(--color-navy);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.btn-sync {
+  background: #4285F4;
+  color: white;
+  border-color: #4285F4;
+  margin-left: auto;
+}
+
+.btn-sync:hover:not(:disabled) {
+  background: #357ae8;
+  border-color: #357ae8;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-sync:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .week-range {
@@ -238,6 +259,45 @@
   font-size: 13px;
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* Meal Details */
+.meal-details {
+  margin: 20px 0;
+  padding: 15px;
+  background: var(--color-peach);
+  border-radius: 8px;
+}
+
+.meal-details p {
+  margin: 8px 0;
+  color: var(--text-primary);
+}
+
+.synced-badge {
+  color: #4caf50;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* View Recipe Button */
+.btn-view-recipe {
+  background: var(--color-purple-grey);
+  color: white;
+  border: 2px solid var(--color-purple-grey);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-view-recipe:hover {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 1024px) {

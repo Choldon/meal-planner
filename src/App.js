@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import Navigation from './components/Navigation';
+import Login from './components/Login';
 import Calendar from './components/Calendar';
 import RecipeMenu from './components/RecipeMenu';
 import ShoppingBasket from './components/ShoppingBasket';
+import ProtectedRoute from './components/ProtectedRoute';
 import { supabase } from './utils/supabaseClient';
 import './styles/App.css';
 
-function App() {
+function AppContent() {
   const [meals, setMeals] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -464,39 +467,44 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="App">
-        <Navigation />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Navigate to="/calendar" replace />} />
-            <Route 
-              path="/calendar" 
-              element={
-                <Calendar 
+    <div className="App">
+      <Navigation />
+      <main className="main-content">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Navigate to="/calendar" replace />} />
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <Calendar
                   meals={meals}
                   recipes={recipes}
                   onAddMeal={addMeal}
                   onUpdateMeal={updateMeal}
                   onDeleteMeal={deleteMeal}
                 />
-              } 
-            />
-            <Route 
-              path="/recipes" 
-              element={
-                <RecipeMenu 
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipes"
+            element={
+              <ProtectedRoute>
+                <RecipeMenu
                   recipes={recipes}
                   ingredients={ingredients}
                   onAddRecipe={addRecipe}
                   onUpdateRecipe={updateRecipe}
                   onDeleteRecipe={deleteRecipe}
                 />
-              } 
-            />
-            <Route 
-              path="/shopping" 
-              element={
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shopping"
+            element={
+              <ProtectedRoute>
                 <ShoppingBasket
                   shoppingList={shoppingList}
                   ingredients={ingredients}
@@ -509,11 +517,21 @@ function App() {
                   onUpdateIngredient={updateIngredient}
                   onDeleteIngredient={deleteIngredient}
                 />
-              } 
-            />
-          </Routes>
-        </main>
-      </div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }

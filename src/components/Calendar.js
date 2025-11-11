@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { syncMealToCalendar, syncMealsToCalendar } from '../utils/googleCalendar';
 import '../styles/Calendar.css';
 
 function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
+  const navigate = useNavigate();
   const [currentWeekStart, setCurrentWeekStart] = useState(getMonday(new Date()));
   const [showPersonSelector, setShowPersonSelector] = useState(false);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
@@ -9,6 +12,7 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [editingMeal, setEditingMeal] = useState(null);
+  const [syncing, setSyncing] = useState(false);
 
   // Get Monday of the current week
   function getMonday(date) {
@@ -71,6 +75,12 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
     setShowMealOptions(false);
     setSelectedPeople(editingMeal.people);
     setShowPersonSelector(true);
+  };
+
+  const handleViewRecipe = () => {
+    setShowMealOptions(false);
+    // Navigate to recipes page with the recipe ID as state
+    navigate('/recipes', { state: { openRecipeId: editingMeal.recipeId } });
   };
 
   const handleDeleteMeal = () => {
@@ -148,6 +158,71 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
     return `${currentWeekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
   };
 
+  const handleSyncToCalendar = async () => {
+    if (!window.confirm('Sync this week\'s meals to Google Calendar?')) {
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      
+      // Get meals for current week
+      const weekEnd = new Date(currentWeekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      
+      const weekMeals = meals.filter(meal => {
+        const mealDate = new Date(meal.date);
+        return mealDate >= currentWeekStart && mealDate <= weekEnd;
+      });
+
+      if (weekMeals.length === 0) {
+        alert('No meals to sync for this week!');
+        return;
+      }
+
+      const results = await syncMealsToCalendar(weekMeals, recipes);
+      
+      const successCount = results.success.length;
+      const failedCount = results.failed.length;
+      const skippedCount = results.success.filter(r => r.skipped).length;
+      
+      let message = `Synced ${successCount - skippedCount} meal(s) to Google Calendar!`;
+      if (skippedCount > 0) {
+        message += `\n${skippedCount} meal(s) were already synced.`;
+      }
+      if (failedCount > 0) {
+        message += `\n${failedCount} meal(s) failed to sync.`;
+      }
+      
+      alert(message);
+    } catch (error) {
+      console.error('Error syncing to calendar:', error);
+      alert('Failed to sync to Google Calendar. Please make sure you\'re signed in and have granted calendar access.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSyncSingleMeal = async (meal) => {
+    try {
+      setSyncing(true);
+      const recipe = recipes.find(r => r.id === meal.recipeId);
+      
+      if (!recipe) {
+        alert('Recipe not found!');
+        return;
+      }
+
+      await syncMealToCalendar(meal, recipe);
+      alert('Meal synced to Google Calendar!');
+    } catch (error) {
+      console.error('Error syncing meal:', error);
+      alert('Failed to sync meal. Please make sure you\'re signed in and have granted calendar access.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="calendar-container">
       <div className="calendar-header">
@@ -156,6 +231,13 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
           <button onClick={goToPreviousWeek} className="btn-nav">← Previous</button>
           <button onClick={goToCurrentWeek} className="btn-today">Today</button>
           <button onClick={goToNextWeek} className="btn-nav">Next →</button>
+          <button
+            onClick={handleSyncToCalendar}
+            className="btn-sync"
+            disabled={syncing}
+          >
+            {syncing ? '⏳ Syncing...' : '📅 Sync to Google Calendar'}
+          </button>
         </div>
         <p className="week-range">{formatWeekRange()}</p>
       </div>
@@ -271,7 +353,7 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
         </div>
       )}
 
-      {/* Meal Options Modal (Edit/Delete) */}
+      {/* Meal Options Modal (Edit/Delete/Sync) */}
       {showMealOptions && editingMeal && (
         <div className="modal-overlay" onClick={() => setShowMealOptions(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -279,11 +361,27 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
             <div className="meal-details">
               <p><strong>Recipe:</strong> {recipes.find(r => r.id === editingMeal.recipeId)?.title || 'Unknown'}</p>
               <p><strong>People:</strong> {editingMeal.people.join(', ')}</p>
+              {editingMeal.calendarEventId && (
+                <p className="synced-badge">✓ Synced to Calendar</p>
+              )}
             </div>
             <div className="modal-actions" style={{ flexDirection: 'column', gap: '10px' }}>
+              <button onClick={handleViewRecipe} className="btn-view-recipe" style={{ width: '100%' }}>
+                📖 View Recipe
+              </button>
               <button onClick={handleEditMeal} className="btn-edit" style={{ width: '100%' }}>
                 Edit Meal
               </button>
+              {!editingMeal.calendarEventId && (
+                <button
+                  onClick={() => handleSyncSingleMeal(editingMeal)}
+                  className="btn-sync"
+                  style={{ width: '100%' }}
+                  disabled={syncing}
+                >
+                  {syncing ? '⏳ Syncing...' : '📅 Sync to Calendar'}
+                </button>
+              )}
               <button onClick={handleDeleteMeal} className="btn-delete" style={{ width: '100%' }}>
                 Delete Meal
               </button>

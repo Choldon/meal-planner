@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import '../styles/RecipeMenu.css';
 
 function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDeleteRecipe }) {
+  const location = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -14,6 +16,19 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     ingredients: [],
     method: ['']
   });
+
+  // Auto-open recipe when navigated from calendar
+  useEffect(() => {
+    if (location.state?.openRecipeId) {
+      const recipe = recipes.find(r => r.id === location.state.openRecipeId);
+      if (recipe) {
+        setSelectedRecipe(recipe);
+        setShowForm(false);
+      }
+      // Clear the state so it doesn't re-trigger
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, recipes]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
