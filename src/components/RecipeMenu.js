@@ -19,6 +19,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
   });
   const [selectedTags, setSelectedTags] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [tagsInput, setTagsInput] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -199,8 +200,12 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
       return;
     }
 
+    // Convert tags input string to array
+    const tagsArray = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+
     const recipe = {
       ...formData,
+      tags: tagsArray,
       servings: parseInt(formData.servings),
       prepTime: parseInt(formData.prepTime),
       cookTime: parseInt(formData.cookTime),
@@ -231,6 +236,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
       ingredients: [],
       method: ['']
     });
+    setTagsInput('');
     setShowForm(false);
     setEditingRecipe(null);
   };
@@ -250,6 +256,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
       ingredients: recipe.ingredients,
       method: recipe.method
     });
+    setTagsInput(recipe.tags ? recipe.tags.join(', ') : '');
     setShowForm(true);
     setSelectedRecipe(null);
   };
@@ -400,11 +407,8 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
               <input
                 type="text"
                 name="tags"
-                value={Array.isArray(formData.tags) ? formData.tags.join(', ') : ''}
-                onChange={(e) => setFormData({ 
-                  ...formData, 
-                  tags: e.target.value.split(',').map(t => t.trim()).filter(t => t) 
-                })}
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
                 placeholder="e.g., quick, healthy, budget-friendly"
               />
             </div>
