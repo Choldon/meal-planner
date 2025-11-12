@@ -179,3 +179,69 @@
   font-size: 16px;
   font-weight: 500;
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 15px 10px;
+  }
+
+  .modal-content {
+    padding: 20px 15px;
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .modal-content h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-add, .btn-confirm, .btn-submit,
+  .btn-cancel, .btn-back, .btn-delete, .btn-edit {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .empty-state {
+    padding: 40px 15px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: 10px 8px;
+  }
+
+  .modal-content {
+    padding: 15px 12px;
+    border-radius: 8px;
+  }
+
+  .btn-add, .btn-confirm, .btn-submit,
+  .btn-cancel, .btn-back, .btn-delete, .btn-edit {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}

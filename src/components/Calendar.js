@@ -339,8 +339,9 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
         <p className="week-range">{formatWeekRange()}</p>
       </div>
 
-      <div className="calendar-grid">
-        <div className="calendar-row header-row">
+      <div className="calendar-grid-wrapper">
+        <div className="calendar-grid">
+          <div className="calendar-row header-row">
           <div className="time-label"></div>
           {weekDays.map((day, index) => (
             <div key={index} className="day-header">
@@ -375,6 +376,7 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
             })}
           </div>
         ))}
+        </div>
       </div>
 
       {/* Person Selector Modal */}
