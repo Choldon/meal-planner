@@ -279,9 +279,25 @@ function AppContent() {
   // RECIPES OPERATIONS
   const addRecipe = async (recipe) => {
     try {
+      // Convert camelCase to snake_case for database
+      const dbRecipe = {
+        id: Date.now(),
+        title: recipe.title,
+        diet: recipe.diet,
+        cuisine: recipe.cuisine,
+        rating: recipe.rating,
+        difficulty: recipe.difficulty,
+        tags: recipe.tags,
+        servings: recipe.servings,
+        prep_time: recipe.prepTime,
+        cook_time: recipe.cookTime,
+        ingredients: recipe.ingredients,
+        method: recipe.method
+      };
+
       const { error } = await supabase
         .from('recipes')
-        .insert([{ ...recipe, id: Date.now() }]);
+        .insert([dbRecipe]);
 
       if (error) throw error;
     } catch (error) {
@@ -292,9 +308,25 @@ function AppContent() {
 
   const updateRecipe = async (recipeId, updatedRecipe) => {
     try {
+      // Convert camelCase to snake_case for database
+      const dbRecipe = {
+        title: updatedRecipe.title,
+        diet: updatedRecipe.diet,
+        cuisine: updatedRecipe.cuisine,
+        rating: updatedRecipe.rating,
+        difficulty: updatedRecipe.difficulty,
+        tags: updatedRecipe.tags,
+        servings: updatedRecipe.servings,
+        prep_time: updatedRecipe.prepTime,
+        cook_time: updatedRecipe.cookTime,
+        ingredients: updatedRecipe.ingredients,
+        method: updatedRecipe.method,
+        updated_at: new Date().toISOString()
+      };
+
       const { error } = await supabase
         .from('recipes')
-        .update({ ...updatedRecipe, updated_at: new Date().toISOString() })
+        .update(dbRecipe)
         .eq('id', recipeId);
 
       if (error) throw error;
