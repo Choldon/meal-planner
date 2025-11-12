@@ -4,6 +4,7 @@ import { syncMealToCalendar, syncMealsToCalendar } from '../utils/googleCalendar
 import { useAutoSync } from '../hooks/useAutoSync';
 import ImportModal from './ImportModal';
 import SyncStatusIndicator from './SyncStatusIndicator';
+import CalendarSelector from './CalendarSelector';
 import '../styles/Calendar.css';
 
 function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
@@ -292,6 +293,10 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
         <div className="calendar-header-top">
           <h2>Weekly Meal Calendar</h2>
           <div className="calendar-sync-controls">
+            <CalendarSelector onCalendarChange={() => {
+              // Optionally trigger a refresh when calendar changes
+              console.log('Calendar changed');
+            }} />
             <button
               onClick={toggleAutoSync}
               className={`btn-auto-sync ${autoSyncEnabled ? 'active' : ''}`}

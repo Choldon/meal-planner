@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getSelectedCalendarId } from './calendarSelector';
 
 /**
  * Get the user's Google Calendar access token from Supabase session
@@ -50,7 +51,8 @@ export const createCalendarEvent = async (meal, recipe) => {
       }
     };
     
-    const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    const calendarId = getSelectedCalendarId();
+    const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -104,8 +106,9 @@ export const deleteCalendarEvent = async (eventId) => {
   try {
     const accessToken = await getAccessToken();
     
+    const calendarId = getSelectedCalendarId();
     const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
       {
         method: 'DELETE',
         headers: {

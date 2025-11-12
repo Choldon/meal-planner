@@ -1,14 +1,17 @@
 /**
  * useAutoSync Hook
  * Automatically syncs Google Calendar events in the background while the app is open
+ * Performs bidirectional sync: imports FROM and exports TO Google Calendar
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { 
-  importFromGoogleCalendar, 
+import {
+  importFromGoogleCalendar,
   createMealsFromEvents,
-  storeUnmatchedEvents 
+  storeUnmatchedEvents
 } from '../utils/syncEngine';
+import { syncMealToCalendar } from '../utils/googleCalendar';
+import { supabase } from '../utils/supabaseClient';
 
 /**
  * Custom hook for automatic background sync with Google Calendar
@@ -27,6 +30,7 @@ export function useAutoSync(enabled = true, intervalMinutes = 10, onSyncComplete
     successfulSyncs: 0,
     failedSyncs: 0,
     mealsImported: 0,
+    mealsExported: 0,
     unmatchedEvents: 0
   });
   
@@ -34,7 +38,74 @@ export function useAutoSync(enabled = true, intervalMinutes = 10, onSyncComplete
   const isMountedRef = useRef(true);
 
   /**
-   * Perform automatic sync
+   * Export unsynced meals to Google Calendar
+   */
+  const exportUnsyncedMeals = async (startDateStr, endDateStr) => {
+    try {
+      // Fetch all recipes for reference
+      const { data: recipes, error: recipesError } = await supabase
+        .from('recipes')
+        .select('*');
+      
+      if (recipesError) {
+        throw new Error(`Failed to fetch recipes: ${recipesError.message}`);
+      }
+
+      // Fetch meals in date range that haven't been synced to calendar
+      const { data: unsyncedMeals, error: mealsError } = await supabase
+        .from('meals')
+        .select('*')
+        .gte('date', startDateStr)
+        .lte('date', endDateStr)
+        .is('calendar_event_id', null);
+      
+      if (mealsError) {
+        throw new Error(`Failed to fetch meals: ${mealsError.message}`);
+      }
+
+      if (!unsyncedMeals || unsyncedMeals.length === 0) {
+        return { exported: 0, failed: 0 };
+      }
+
+      let exported = 0;
+      let failed = 0;
+
+      // Sync each unsynced meal to Google Calendar
+      for (const meal of unsyncedMeals) {
+        try {
+          const recipe = recipes.find(r => r.id === meal.recipe_id);
+          if (!recipe) {
+            console.warn(`Recipe not found for meal ${meal.id}`);
+            failed++;
+            continue;
+          }
+
+          // Convert snake_case to camelCase for syncMealToCalendar
+          const mealForSync = {
+            id: meal.id,
+            date: meal.date,
+            mealType: meal.meal_type,
+            recipeId: meal.recipe_id,
+            people: meal.people
+          };
+
+          await syncMealToCalendar(mealForSync, recipe);
+          exported++;
+        } catch (error) {
+          console.error(`Failed to sync meal ${meal.id}:`, error);
+          failed++;
+        }
+      }
+
+      return { exported, failed };
+    } catch (error) {
+      console.error('Error exporting unsynced meals:', error);
+      throw error;
+    }
+  };
+
+  /**
+   * Perform automatic bidirectional sync
    */
   const performSync = async () => {
     // Don't sync if already syncing or disabled
@@ -57,37 +128,47 @@ export function useAutoSync(enabled = true, intervalMinutes = 10, onSyncComplete
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // Import events from Google Calendar
+      let mealsImportedCount = 0;
+      let mealsExportedCount = 0;
+
+      // STEP 1: Import events FROM Google Calendar
       const importResults = await importFromGoogleCalendar(startDateStr, endDateStr);
 
       // Only proceed if there are matched events
       if (importResults.matched.length > 0) {
         // Automatically import all matched events
         const createResults = await createMealsFromEvents(importResults.matched);
+        mealsImportedCount = createResults.created.length;
         
         // Store unmatched events for later resolution
         if (importResults.unmatched.length > 0) {
           await storeUnmatchedEvents(importResults.unmatched);
         }
+      }
 
-        // Update stats
-        if (isMountedRef.current) {
-          setSyncStats(prev => ({
-            totalSyncs: prev.totalSyncs + 1,
-            successfulSyncs: prev.successfulSyncs + 1,
-            failedSyncs: prev.failedSyncs,
-            mealsImported: prev.mealsImported + createResults.created.length,
-            unmatchedEvents: prev.unmatchedEvents + importResults.unmatched.length
-          }));
+      // STEP 2: Export unsynced meals TO Google Calendar
+      const exportResults = await exportUnsyncedMeals(startDateStr, endDateStr);
+      mealsExportedCount = exportResults.exported;
 
-          // Call callback if provided
-          if (onSyncComplete && createResults.created.length > 0) {
-            onSyncComplete({
-              created: createResults.created.length,
-              skipped: createResults.skipped.length,
-              unmatched: importResults.unmatched.length
-            });
-          }
+      // Update stats
+      if (isMountedRef.current) {
+        setSyncStats(prev => ({
+          totalSyncs: prev.totalSyncs + 1,
+          successfulSyncs: prev.successfulSyncs + 1,
+          failedSyncs: prev.failedSyncs,
+          mealsImported: prev.mealsImported + mealsImportedCount,
+          mealsExported: prev.mealsExported + mealsExportedCount,
+          unmatchedEvents: prev.unmatchedEvents + (importResults.unmatched?.length || 0)
+        }));
+
+        // Call callback if provided
+        if (onSyncComplete && (mealsImportedCount > 0 || mealsExportedCount > 0)) {
+          onSyncComplete({
+            created: mealsImportedCount,
+            exported: mealsExportedCount,
+            skipped: 0,
+            unmatched: importResults.unmatched?.length || 0
+          });
         }
       }
 
@@ -130,6 +211,7 @@ export function useAutoSync(enabled = true, intervalMinutes = 10, onSyncComplete
       successfulSyncs: 0,
       failedSyncs: 0,
       mealsImported: 0,
+      mealsExported: 0,
       unmatchedEvents: 0
     });
   };

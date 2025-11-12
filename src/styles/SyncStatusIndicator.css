@@ -74,6 +74,11 @@
   font-weight: 500;
 }
 
+.sync-detail.exported {
+  color: #2196F3;
+  font-weight: 500;
+}
+
 .sync-detail.unmatched {
   color: #ff9800;
   font-weight: 500;

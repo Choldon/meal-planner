@@ -27,6 +27,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .btn-auto-sync {
@@ -402,6 +403,11 @@
   .calendar-sync-controls {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .calendar-sync-controls > * {
+    flex-shrink: 0;
   }
 
   .calendar-row {

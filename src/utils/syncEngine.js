@@ -6,6 +6,7 @@
 import { supabase } from './supabaseClient';
 import { extractMealEvents, validateMealEvent } from './eventParser';
 import { findBestMatch } from './recipeMatcher';
+import { getSelectedCalendarId } from './calendarSelector';
 
 /**
  * Get the user's Google Calendar access token from Supabase session
@@ -35,7 +36,8 @@ export async function fetchGoogleCalendarEvents(startDate, endDate) {
     const timeMin = `${startDate}T00:00:00Z`;
     const timeMax = `${endDate}T23:59:59Z`;
     
-    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+    const calendarId = getSelectedCalendarId();
+    const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
     url.searchParams.append('timeMin', timeMin);
     url.searchParams.append('timeMax', timeMax);
     url.searchParams.append('singleEvents', 'true');

@@ -39,7 +39,12 @@ function SyncStatusIndicator({ isSyncing, lastSyncTime, syncError, syncStats }) 
         <span className="sync-detail">Last: {formatLastSync(lastSyncTime)}</span>
         {syncStats && syncStats.mealsImported > 0 && (
           <span className="sync-detail imported">
-            {syncStats.mealsImported} meal{syncStats.mealsImported !== 1 ? 's' : ''} imported
+            ↓ {syncStats.mealsImported} imported
+          </span>
+        )}
+        {syncStats && syncStats.mealsExported > 0 && (
+          <span className="sync-detail exported">
+            ↑ {syncStats.mealsExported} exported
           </span>
         )}
         {syncStats && syncStats.unmatchedEvents > 0 && (
