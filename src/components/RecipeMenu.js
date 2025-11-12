@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import RecipeImportModal from './RecipeImportModal';
 import '../styles/RecipeMenu.css';
 
 function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDeleteRecipe }) {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
   
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +23,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
   const [selectedTags, setSelectedTags] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -35,8 +39,43 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     method: ['']
   });
 
-  // Auto-open recipe when navigated from calendar
+  // Auto-open recipe when navigated from calendar or URL parameter
   useEffect(() => {
+    console.log('=== RecipeMenu useEffect triggered ===');
+    console.log('Recipes loaded:', recipes.length);
+    console.log('Search params:', searchParams.toString());
+    console.log('Location state:', location.state);
+    
+    // Wait for recipes to load
+    if (recipes.length === 0) {
+      console.log('Waiting for recipes to load...');
+      return;
+    }
+    
+    // Check URL parameter first (from Google Calendar links)
+    const recipeIdParam = searchParams.get('recipeId');
+    console.log('Recipe ID from URL:', recipeIdParam);
+    
+    if (recipeIdParam) {
+      const recipeId = parseInt(recipeIdParam);
+      console.log('Searching for recipe with ID:', recipeId);
+      console.log('Available recipe IDs:', recipes.map(r => r.id));
+      
+      const recipe = recipes.find(r => r.id === recipeId);
+      console.log('Found recipe:', recipe ? recipe.title : 'NOT FOUND');
+      
+      if (recipe) {
+        console.log('Opening recipe:', recipe.title);
+        setSelectedRecipe(recipe);
+        setShowForm(false);
+      } else {
+        console.warn('Recipe not found with ID:', recipeId);
+        console.warn('Available recipes:', recipes.map(r => ({ id: r.id, title: r.title })));
+      }
+      return;
+    }
+    
+    // Then check location state (from internal navigation)
     if (location.state?.openRecipeId) {
       const recipe = recipes.find(r => r.id === location.state.openRecipeId);
       if (recipe) {
@@ -45,7 +84,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
       }
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, recipes]);
+  }, [location.state, searchParams, recipes]);
 
   // Helper function to get ingredient name
   const getIngredientName = (ingredientId) => {
@@ -270,6 +309,32 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     }
   };
 
+  const handleImportComplete = (importedRecipe, metadata) => {
+    // Set the imported recipe data into the form
+    setFormData({
+      title: importedRecipe.title,
+      diet: importedRecipe.diet,
+      cuisine: importedRecipe.cuisine,
+      rating: importedRecipe.rating,
+      difficulty: importedRecipe.difficulty,
+      tags: importedRecipe.tags,
+      servings: importedRecipe.servings,
+      prepTime: importedRecipe.prepTime,
+      cookTime: importedRecipe.cookTime,
+      ingredients: importedRecipe.ingredients,
+      method: importedRecipe.method
+    });
+    setTagsInput(importedRecipe.tags.join(', '));
+    
+    // Show the form with imported data
+    setShowForm(true);
+    setEditingRecipe(null);
+    setSelectedRecipe(null);
+    
+    // Show success message
+    alert(`✅ Recipe imported successfully!\n💰 Cost: $${metadata.estimatedCost.toFixed(6)}\n\nReview and save the recipe.`);
+  };
+
   const renderStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
@@ -291,16 +356,38 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     <div className="recipe-menu-container">
       <div className="recipe-menu-header">
         <h2>Recipe Collection</h2>
-        <button 
-          onClick={() => {
-            setShowForm(true);
-            setEditingRecipe(null);
-            setSelectedRecipe(null);
-          }} 
-          className="btn-add"
-        >
-          + Add New Recipe
-        </button>
+        <div className="add-recipe-dropdown">
+          <button
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            className="btn-add"
+          >
+            + Add New Recipe
+          </button>
+          {showAddMenu && (
+            <div className="dropdown-menu">
+              <button
+                onClick={() => {
+                  setShowForm(true);
+                  setEditingRecipe(null);
+                  setSelectedRecipe(null);
+                  setShowAddMenu(false);
+                }}
+                className="dropdown-item"
+              >
+                ✏️ Create Manually
+              </button>
+              <button
+                onClick={() => {
+                  setShowImportModal(true);
+                  setShowAddMenu(false);
+                }}
+                className="dropdown-item"
+              >
+                🌐 Import from URL
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {showForm ? (
@@ -725,6 +812,14 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
           </div>
         </>
       )}
+
+      {/* Recipe Import Modal */}
+      <RecipeImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        ingredients={ingredients}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   );
 }

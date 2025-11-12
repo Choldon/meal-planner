@@ -19,6 +19,7 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [editingMeal, setEditingMeal] = useState(null);
+  const [recipeSearchTerm, setRecipeSearchTerm] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
@@ -145,6 +146,7 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
       return;
     }
     setShowPersonSelector(false);
+    setRecipeSearchTerm(''); // Reset search when opening
     setShowRecipeSelector(true);
   };
 
@@ -444,30 +446,78 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
         <div className="modal-overlay" onClick={() => setShowRecipeSelector(false)}>
           <div className="modal-content recipe-selector" onClick={(e) => e.stopPropagation()}>
             <h3>Select a Recipe</h3>
+            
+            {/* Search Input */}
+            <div className="recipe-search">
+              <input
+                type="text"
+                placeholder="🔍 Search recipes by name, diet, cuisine, or tags..."
+                value={recipeSearchTerm}
+                onChange={(e) => setRecipeSearchTerm(e.target.value)}
+                className="recipe-search-input"
+                autoFocus
+              />
+              {recipeSearchTerm && (
+                <button
+                  onClick={() => setRecipeSearchTerm('')}
+                  className="clear-search-btn"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             <div className="recipe-list">
               {recipes.length === 0 ? (
                 <p>No recipes available. Add some recipes first!</p>
               ) : (
-                recipes.map(recipe => (
-                  <div 
-                    key={recipe.id} 
-                    className="recipe-item"
-                    onClick={() => handleRecipeSelect(recipe)}
-                  >
-                    <h4>{recipe.title}</h4>
-                    <p className="recipe-meta">
-                      {recipe.diet} • {recipe.servings} servings • {recipe.prepTime + recipe.cookTime} mins
-                    </p>
-                  </div>
-                ))
+                (() => {
+                  // Filter recipes based on search term
+                  const filteredRecipes = recipes.filter(recipe => {
+                    if (!recipeSearchTerm) return true;
+                    
+                    const searchLower = recipeSearchTerm.toLowerCase();
+                    return (
+                      recipe.title.toLowerCase().includes(searchLower) ||
+                      recipe.diet.toLowerCase().includes(searchLower) ||
+                      (recipe.cuisine && recipe.cuisine.toLowerCase().includes(searchLower)) ||
+                      (recipe.tags && recipe.tags.some(tag => tag.toLowerCase().includes(searchLower)))
+                    );
+                  });
+
+                  return filteredRecipes.length === 0 ? (
+                    <p className="no-results">No recipes match "{recipeSearchTerm}"</p>
+                  ) : (
+                    filteredRecipes.map(recipe => (
+                      <div
+                        key={recipe.id}
+                        className="recipe-item"
+                        onClick={() => handleRecipeSelect(recipe)}
+                      >
+                        <h4>{recipe.title}</h4>
+                        <p className="recipe-meta">
+                          {recipe.diet} • {recipe.servings} servings • {recipe.prepTime + recipe.cookTime} mins
+                          {recipe.cuisine && ` • ${recipe.cuisine}`}
+                        </p>
+                        {recipe.tags && recipe.tags.length > 0 && (
+                          <p className="recipe-tags-preview">
+                            {recipe.tags.slice(0, 3).map(tag => `#${tag}`).join(' ')}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  );
+                })()
               )}
             </div>
             <div className="modal-actions">
-              <button 
+              <button
                 onClick={() => {
                   setShowRecipeSelector(false);
+                  setRecipeSearchTerm('');
                   setShowPersonSelector(true);
-                }} 
+                }}
                 className="btn-cancel"
               >
                 Back

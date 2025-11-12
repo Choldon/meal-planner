@@ -31,9 +31,10 @@ export const createCalendarEvent = async (meal, recipe) => {
       description += `For: ${meal.people.join(', ')}\n\n`;
     }
     
-    // Add link to meal planner (users can view full recipe details there)
-    const appUrl = window.location.origin;
-    description += `View recipe in meal planner:\n${appUrl}/recipes`;
+    // Add direct link to the specific recipe in the meal planner
+    // Use production URL instead of localhost
+    const productionUrl = 'https://meal-planner-d1es.onrender.com';
+    description += `View recipe in meal planner:\n${productionUrl}/recipes?recipeId=${recipe.id}`;
     
     // Add "*" prefix to lunch events so they appear first in Google Calendar
     const mealTypeLabel = meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1);
