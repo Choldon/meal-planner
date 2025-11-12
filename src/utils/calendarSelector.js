@@ -6,6 +6,7 @@
 import { supabase } from './supabaseClient';
 
 const STORAGE_KEY = 'selected_calendar_id';
+const SETUP_COMPLETE_KEY = 'calendar_setup_complete';
 
 /**
  * Get the user's Google Calendar access token from Supabase session
@@ -87,7 +88,7 @@ export function clearSelectedCalendar() {
 
 /**
  * Get calendar display name
- * 
+ *
  * @param {Array} calendars - Array of calendar objects
  * @param {string} calendarId - Calendar ID to find
  * @returns {string} Calendar display name
@@ -100,4 +101,28 @@ export function getCalendarDisplayName(calendars, calendarId) {
   
   const calendar = calendars.find(cal => cal.id === calendarId);
   return calendar ? calendar.summary : 'Unknown Calendar';
+}
+
+/**
+ * Check if calendar setup has been completed
+ *
+ * @returns {boolean} True if setup is complete
+ */
+export function isSetupComplete() {
+  return localStorage.getItem(SETUP_COMPLETE_KEY) === 'true';
+}
+
+/**
+ * Mark calendar setup as complete
+ */
+export function markSetupComplete() {
+  localStorage.setItem(SETUP_COMPLETE_KEY, 'true');
+}
+
+/**
+ * Reset setup status (for testing or re-onboarding)
+ */
+export function resetSetup() {
+  localStorage.removeItem(SETUP_COMPLETE_KEY);
+  localStorage.removeItem(STORAGE_KEY);
 }

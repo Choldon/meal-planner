@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { syncMealToCalendar, syncMealsToCalendar } from '../utils/googleCalendar';
 import { useAutoSync } from '../hooks/useAutoSync';
+import { isSetupComplete, markSetupComplete } from '../utils/calendarSelector';
 import ImportModal from './ImportModal';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import CalendarSelector from './CalendarSelector';
+import CalendarSetupModal from './CalendarSetupModal';
 import '../styles/Calendar.css';
 
 function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
@@ -18,7 +20,25 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [editingMeal, setEditingMeal] = useState(null);
   const [syncing, setSyncing] = useState(false);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+
+  // Check if this is first time setup
+  useEffect(() => {
+    if (!isSetupComplete()) {
+      // Show setup modal after a short delay to let the page load
+      const timer = setTimeout(() => {
+        setShowSetupModal(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleSetupComplete = (selectedCalendarId) => {
+    markSetupComplete();
+    setShowSetupModal(false);
+    console.log('Calendar setup complete. Selected:', selectedCalendarId);
+  };
 
   // Set up automatic background sync
   const {
@@ -504,6 +524,12 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
         startDate={getWeekDateRange().startDate}
         endDate={getWeekDateRange().endDate}
         onImportComplete={handleImportComplete}
+      />
+
+      {/* Calendar Setup Modal (First Time) */}
+      <CalendarSetupModal
+        isOpen={showSetupModal}
+        onComplete={handleSetupComplete}
       />
     </div>
   );
