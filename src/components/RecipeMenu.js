@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import RecipeImportModal from './RecipeImportModal';
 import '../styles/RecipeMenu.css';
@@ -24,6 +24,10 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
   const [showFilters, setShowFilters] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImageImportInfo, setShowImageImportInfo] = useState(false);
+  const [importMode, setImportMode] = useState('url'); // 'url' or 'image'
+  const [imageData, setImageData] = useState(null);
+  const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -148,8 +152,13 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
   }, [recipes, searchTerm, filters, selectedTags, ingredients]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, type } = e.target;
+    // For number inputs, allow empty string for easier editing
+    if (type === 'number') {
+      setFormData({ ...formData, [name]: value === '' ? '' : value });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleFilterChange = (filterName, value) => {
@@ -203,6 +212,20 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     setFormData({ ...formData, method: newMethod });
   };
 
+  const moveMethodStepUp = (index) => {
+    if (index === 0) return; // Can't move first step up
+    const newMethod = [...formData.method];
+    [newMethod[index - 1], newMethod[index]] = [newMethod[index], newMethod[index - 1]];
+    setFormData({ ...formData, method: newMethod });
+  };
+
+  const moveMethodStepDown = (index) => {
+    if (index === formData.method.length - 1) return; // Can't move last step down
+    const newMethod = [...formData.method];
+    [newMethod[index], newMethod[index + 1]] = [newMethod[index + 1], newMethod[index]];
+    setFormData({ ...formData, method: newMethod });
+  };
+
   const addIngredient = () => {
     setFormData({
       ...formData,
@@ -212,7 +235,12 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
 
   const updateIngredient = (index, field, value) => {
     const newIngredients = [...formData.ingredients];
-    newIngredients[index][field] = field === 'quantity' ? parseFloat(value) || 0 : value;
+    // Allow empty string for quantity to make editing easier
+    if (field === 'quantity') {
+      newIngredients[index][field] = value === '' ? '' : value;
+    } else {
+      newIngredients[index][field] = value;
+    }
     setFormData({ ...formData, ingredients: newIngredients });
   };
 
@@ -245,10 +273,14 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     const recipe = {
       ...formData,
       tags: tagsArray,
-      servings: parseInt(formData.servings),
-      prepTime: parseInt(formData.prepTime),
-      cookTime: parseInt(formData.cookTime),
+      servings: parseInt(formData.servings) || 1,
+      prepTime: parseInt(formData.prepTime) || 0,
+      cookTime: parseInt(formData.cookTime) || 0,
       rating: parseFloat(formData.rating) || 0,
+      ingredients: formData.ingredients.map(ing => ({
+        ...ing,
+        quantity: parseFloat(ing.quantity) || 0
+      })),
       method: formData.method.filter(step => step.trim())
     };
 
@@ -309,7 +341,42 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     }
   };
 
+  const handleImageSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file (JPEG, PNG, etc.)');
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image size must be less than 10MB');
+        return;
+      }
+
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result.split(',')[1];
+        setImageData(base64String);
+        setImportMode('image');
+        setShowImportModal(true);
+      };
+      reader.onerror = () => {
+        alert('Failed to read image file');
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset file input
+    event.target.value = '';
+  };
+
   const handleImportComplete = (importedRecipe, metadata) => {
+    // The modal has already created the missing ingredients in the database
+    // The importedRecipe now has all the correct ingredientIds
+    
     // Set the imported recipe data into the form
     setFormData({
       title: importedRecipe.title,
@@ -332,7 +399,12 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     setSelectedRecipe(null);
     
     // Show success message
-    alert(`✅ Recipe imported successfully!\n💰 Cost: $${metadata.estimatedCost.toFixed(6)}\n\nReview and save the recipe.`);
+    const source = importMode === 'image' ? 'image' : 'URL';
+    alert(`✅ Recipe imported successfully from ${source}!\n💰 Cost: $${metadata.estimatedCost.toFixed(6)}\n\nAll ingredients have been added to your database.\n\nReview and save the recipe.`);
+    
+    // Reset import state
+    setImageData(null);
+    setImportMode('url');
   };
 
   const renderStars = (rating) => {
@@ -354,6 +426,15 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
 
   return (
     <div className="recipe-menu-container">
+      {/* Hidden file input for image import - must be outside dropdown */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleImageSelect}
+      />
+      
       <div className="recipe-menu-header">
         <h2>Recipe Collection</h2>
         <div className="add-recipe-dropdown">
@@ -378,12 +459,22 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
               </button>
               <button
                 onClick={() => {
+                  setImportMode('url');
                   setShowImportModal(true);
                   setShowAddMenu(false);
                 }}
                 className="dropdown-item"
               >
                 🌐 Import from URL
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddMenu(false);
+                  setShowImageImportInfo(true);
+                }}
+                className="dropdown-item"
+              >
+                📸 Import from Image
               </button>
             </div>
           )}
@@ -450,6 +541,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   min="0"
                   max="5"
                   step="0.5"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -463,6 +555,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   value={formData.servings}
                   onChange={handleInputChange}
                   min="1"
+                  placeholder="2"
                 />
               </div>
 
@@ -474,6 +567,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   value={formData.prepTime}
                   onChange={handleInputChange}
                   min="0"
+                  placeholder="0"
                 />
               </div>
 
@@ -485,6 +579,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   value={formData.cookTime}
                   onChange={handleInputChange}
                   min="0"
+                  placeholder="0"
                 />
               </div>
             </div>
@@ -518,7 +613,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   </select>
                   <input
                     type="number"
-                    placeholder="Quantity"
+                    placeholder="0"
                     value={ing.quantity}
                     onChange={(e) => updateIngredient(index, 'quantity', e.target.value)}
                     step="0.1"
@@ -556,15 +651,36 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                     placeholder="Describe this step..."
                     rows="2"
                   />
-                  {formData.method.length > 1 && (
+                  <div className="method-controls">
                     <button
                       type="button"
-                      onClick={() => removeMethodStep(index)}
-                      className="btn-remove"
+                      onClick={() => moveMethodStepUp(index)}
+                      className="btn-move-up"
+                      disabled={index === 0}
+                      title="Move step up"
                     >
-                      ✕
+                      ▲
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => moveMethodStepDown(index)}
+                      className="btn-move-down"
+                      disabled={index === formData.method.length - 1}
+                      title="Move step down"
+                    >
+                      ▼
+                    </button>
+                    {formData.method.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMethodStep(index)}
+                        className="btn-remove"
+                        title="Remove step"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               <button type="button" onClick={addMethodStep} className="btn-add-item">
@@ -813,12 +929,76 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
         </>
       )}
 
-      {/* Recipe Import Modal */}
+      {/* Image Import Info Modal */}
+      {showImageImportInfo && (
+        <div className="modal-overlay" onClick={() => setShowImageImportInfo(false)}>
+          <div className="modal-content import-info-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>📸 Import Recipe from Image</h3>
+            
+            <div className="import-info-content">
+              <p className="info-intro">
+                Upload a photo of a recipe and AI will extract all the details automatically!
+              </p>
+
+              <div className="supported-formats">
+                <h4>✅ Supported Image Types:</h4>
+                <ul>
+                  <li>📋 <strong>Recipe Cards</strong> - Meal kit cards (Gusto, HelloFresh, etc.)</li>
+                  <li>📖 <strong>Cookbook Pages</strong> - Photos of cookbook recipes</li>
+                  <li>📱 <strong>Screenshots</strong> - Recipe screenshots from websites or apps</li>
+                  <li>✍️ <strong>Handwritten Recipes</strong> - Clear handwritten recipe cards</li>
+                  <li>🖨️ <strong>Printed Recipes</strong> - Printed recipe sheets</li>
+                </ul>
+              </div>
+
+              <div className="import-tips">
+                <h4>💡 Tips for Best Results:</h4>
+                <ul>
+                  <li>Ensure text is clear and readable</li>
+                  <li>Good lighting helps with accuracy</li>
+                  <li>Include the full recipe in the image</li>
+                  <li>Supported formats: JPEG, PNG (max 10MB)</li>
+                </ul>
+              </div>
+
+              <div className="cost-info">
+                <p>💰 <strong>Cost:</strong> ~$0.002-0.03 per image (less than 3 cents!)</p>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                onClick={() => setShowImageImportInfo(false)}
+                className="btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowImageImportInfo(false);
+                  fileInputRef.current?.click();
+                }}
+                className="btn-confirm"
+              >
+                📸 Choose Image
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Recipe Import Modal */}
       <RecipeImportModal
         isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
+        onClose={() => {
+          setShowImportModal(false);
+          setImageData(null);
+          setImportMode('url');
+        }}
         ingredients={ingredients}
         onImportComplete={handleImportComplete}
+        mode={importMode}
+        imageData={imageData}
       />
     </div>
   );

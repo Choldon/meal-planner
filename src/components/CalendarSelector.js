@@ -13,6 +13,23 @@ function CalendarSelector({ onCalendarChange }) {
     loadCalendars();
   }, []);
 
+  // Poll for changes to selected calendar (in case it's updated elsewhere, like in setup modal)
+  useEffect(() => {
+    const checkForUpdates = () => {
+      const currentSelected = getSelectedCalendarId();
+      if (currentSelected !== selectedId) {
+        console.log('Calendar selection updated externally:', currentSelected);
+        setSelectedId(currentSelected);
+      }
+    };
+
+    // Check immediately and then every second
+    checkForUpdates();
+    const interval = setInterval(checkForUpdates, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedId]);
+
   const loadCalendars = async () => {
     setLoading(true);
     setError(null);

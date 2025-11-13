@@ -136,9 +136,18 @@ function AppContent() {
         break;
       
       case 'ingredients':
-        if (eventType === 'INSERT') setIngredients(prev => [...prev, newRecordCamel]);
-        else if (eventType === 'UPDATE') setIngredients(prev => prev.map(i => i.id === newRecordCamel.id ? newRecordCamel : i));
-        else if (eventType === 'DELETE') setIngredients(prev => prev.filter(i => i.id !== oldRecordCamel.id));
+        if (eventType === 'INSERT') {
+          console.log('New ingredient added via realtime:', newRecordCamel);
+          setIngredients(prev => [...prev, newRecordCamel].sort((a, b) => a.name.localeCompare(b.name)));
+        }
+        else if (eventType === 'UPDATE') {
+          console.log('Ingredient updated via realtime:', newRecordCamel);
+          setIngredients(prev => prev.map(i => i.id === newRecordCamel.id ? newRecordCamel : i).sort((a, b) => a.name.localeCompare(b.name)));
+        }
+        else if (eventType === 'DELETE') {
+          console.log('Ingredient deleted via realtime:', oldRecordCamel);
+          setIngredients(prev => prev.filter(i => i.id !== oldRecordCamel.id));
+        }
         break;
       
       case 'shopping_list':
@@ -353,6 +362,17 @@ function AppContent() {
   // INGREDIENTS OPERATIONS
   const addIngredient = async (ingredient) => {
     try {
+      // Check for duplicate ingredient (case-insensitive)
+      const ingredientName = ingredient.name.trim().toLowerCase();
+      const duplicate = ingredients.find(
+        ing => ing.name.toLowerCase() === ingredientName
+      );
+
+      if (duplicate) {
+        alert(`Ingredient "${duplicate.name}" already exists in the database.`);
+        return;
+      }
+
       const { error } = await supabase
         .from('ingredients')
         .insert([{ ...ingredient, id: Date.now() }]);

@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { 
-  importRecipeFromUrl, 
-  matchIngredients, 
+import React, { useState, useEffect } from 'react';
+import {
+  importRecipeFromUrl,
+  importRecipeFromImage,
+  matchIngredients,
   createMissingIngredients,
   validateRecipe,
   formatRecipeForDatabase,
-  getSupportedWebsites 
+  getSupportedWebsites
 } from '../utils/recipeImporter';
 import '../styles/RecipeImportModal.css';
 
-function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
+function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete, mode = 'url', imageData = null }) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,6 +18,14 @@ function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
   const [matchedIngredients, setMatchedIngredients] = useState([]);
   const [metadata, setMetadata] = useState(null);
   const [step, setStep] = useState('input'); // 'input', 'preview', 'complete'
+
+  // Auto-import when image data is provided
+  useEffect(() => {
+    if (mode === 'image' && imageData && isOpen) {
+      handleImageImport();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, imageData, isOpen]);
 
   const handleImport = async () => {
     if (!url.trim()) {
@@ -55,6 +64,44 @@ function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
     }
   };
 
+  const handleImageImport = async () => {
+    if (!imageData) {
+      setError('No image data provided');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setStep('preview'); // Skip input step for images
+
+    try {
+      // Import recipe from image
+      const { recipe, metadata: importMetadata } = await importRecipeFromImage(imageData);
+      
+      // Match ingredients to database
+      const matched = matchIngredients(recipe.ingredients, ingredients);
+      
+      // Validate recipe
+      const validation = validateRecipe(recipe);
+      if (!validation.valid) {
+        setError(`Recipe validation failed: ${validation.errors.join(', ')}`);
+        setLoading(false);
+        return;
+      }
+
+      setImportedRecipe(recipe);
+      setMatchedIngredients(matched);
+      setMetadata(importMetadata);
+
+    } catch (err) {
+      console.error('Image import error:', err);
+      setError(err.message || 'Failed to import recipe from image. Please try again.');
+      setStep('input'); // Go back to allow retry
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleConfirmImport = async () => {
     setLoading(true);
     setError(null);
@@ -62,22 +109,34 @@ function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
     try {
       // Create any missing ingredients first
       const unmatched = matchedIngredients.filter(ing => !ing.matched);
+      let finalMatchedIngredients = [...matchedIngredients];
+      
       if (unmatched.length > 0) {
+        console.log('Creating missing ingredients:', unmatched.map(i => i.ingredientName));
         const newIngredients = await createMissingIngredients(unmatched);
+        console.log('Created ingredients:', newIngredients);
         
-        // Update matched ingredients with new IDs
-        const updatedMatched = matchedIngredients.map(ing => {
+        // Update matched ingredients with new IDs from database
+        finalMatchedIngredients = matchedIngredients.map(ing => {
           if (!ing.matched) {
-            const created = newIngredients.find(n => n.ingredientName === ing.ingredientName);
-            return created || ing;
+            const created = newIngredients.find(n =>
+              n.ingredientName.toLowerCase().trim() === ing.ingredientName.toLowerCase().trim()
+            );
+            if (created) {
+              console.log(`Updated ${ing.ingredientName} with ID ${created.ingredientId}`);
+              return created;
+            }
           }
           return ing;
         });
-        setMatchedIngredients(updatedMatched);
+        
+        setMatchedIngredients(finalMatchedIngredients);
       }
 
-      // Format recipe for database
-      const formattedRecipe = formatRecipeForDatabase(importedRecipe, matchedIngredients);
+      // Format recipe for database using the updated matched ingredients
+      const formattedRecipe = formatRecipeForDatabase(importedRecipe, finalMatchedIngredients);
+      
+      console.log('Final formatted recipe ingredients:', formattedRecipe.ingredients);
 
       // Call parent callback with formatted recipe
       onImportComplete(formattedRecipe, metadata);
@@ -117,12 +176,12 @@ function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
     <div className="recipe-import-overlay">
       <div className="recipe-import-modal">
         <div className="import-header">
-          <h2>🌐 Import Recipe from URL</h2>
+          <h2>{mode === 'image' ? '📸 Import Recipe from Image' : '🌐 Import Recipe from URL'}</h2>
           <button className="close-btn" onClick={handleClose}>×</button>
         </div>
 
         <div className="import-body">
-          {step === 'input' && (
+          {step === 'input' && mode === 'url' && (
             <>
               <div className="url-input-section">
                 <label htmlFor="recipe-url">Recipe URL</label>
@@ -170,6 +229,14 @@ function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
                 </p>
               </div>
             </>
+          )}
+
+          {step === 'input' && mode === 'image' && (
+            <div className="image-import-loading">
+              <div className="spinner"></div>
+              <p>Analyzing image and extracting recipe...</p>
+              <p className="loading-hint">This may take 10-20 seconds</p>
+            </div>
           )}
 
           {step === 'preview' && importedRecipe && (
@@ -238,7 +305,7 @@ function RecipeImportModal({ isOpen, onClose, ingredients, onImportComplete }) {
         </div>
 
         <div className="import-footer">
-          {step === 'input' && (
+          {step === 'input' && mode === 'url' && (
             <>
               <button onClick={handleClose} className="btn-cancel" disabled={loading}>
                 Cancel

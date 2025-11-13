@@ -1,3 +1,26 @@
+/* Clear All Button */
+.btn-clear-all {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-all:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-clear-all:active {
+  transform: translateY(0);
+}
+
 .shopping-basket-container {
   background: var(--bg-primary);
   border-radius: 16px;
@@ -70,6 +93,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+  align-items: start; /* This makes cards align to top and use their own height */
 }
 
 .shopping-card {
@@ -79,6 +103,7 @@
   padding: 20px;
   transition: all 0.3s ease;
   box-shadow: var(--shadow-sm);
+  height: fit-content; /* Card only takes up space it needs */
 }
 
 .shopping-card:hover {

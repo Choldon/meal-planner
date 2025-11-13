@@ -46,6 +46,49 @@ export async function importRecipeFromUrl(url) {
 }
 
 /**
+ * Import a recipe from an image using OpenAI Vision
+ *
+ * @param {string} imageBase64 - Base64 encoded image data
+ * @returns {Promise<Object>} Imported recipe data
+ */
+export async function importRecipeFromImage(imageBase64) {
+  try {
+    // Validate base64 string
+    if (!imageBase64 || typeof imageBase64 !== 'string') {
+      throw new Error('Invalid image data');
+    }
+
+    console.log('Calling import-recipe-from-image Edge Function...');
+
+    // Call the Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('import-recipe-from-image', {
+      body: { imageBase64 }
+    });
+
+    if (error) {
+      console.error('Edge function error:', error);
+      throw new Error(error.message || 'Failed to import recipe from image');
+    }
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to extract recipe data from image');
+    }
+
+    console.log('Recipe imported successfully from image:', data.recipe.title);
+    console.log('Cost:', data.metadata.estimatedCost);
+
+    return {
+      recipe: data.recipe,
+      metadata: data.metadata
+    };
+
+  } catch (error) {
+    console.error('Recipe image import error:', error);
+    throw error;
+  }
+}
+
+/**
  * Match ingredient names to existing ingredients in database
  * 
  * @param {Array} extractedIngredients - Ingredients from OpenAI [{quantity, unit, name}]
@@ -79,7 +122,7 @@ export function matchIngredients(extractedIngredients, dbIngredients) {
 
 /**
  * Create new ingredients that don't exist in database
- * 
+ *
  * @param {Array} unmatchedIngredients - Ingredients without ingredientId
  * @returns {Promise<Array>} Created ingredient IDs
  */
@@ -89,20 +132,67 @@ export async function createMissingIngredients(unmatchedIngredients) {
   for (const ing of unmatchedIngredients) {
     if (!ing.matched && ing.ingredientName) {
       try {
+        // Double-check for duplicates before creating (case-insensitive)
+        const { data: existingIngredients, error: fetchError } = await supabase
+          .from('ingredients')
+          .select('*');
+
+        if (fetchError) {
+          console.error('Error fetching ingredients:', fetchError);
+          continue;
+        }
+
+        const ingredientNameLower = ing.ingredientName.toLowerCase().trim();
+        const duplicate = existingIngredients.find(
+          existing => existing.name.toLowerCase().trim() === ingredientNameLower
+        );
+
+        if (duplicate) {
+          console.log(`Ingredient "${ing.ingredientName}" already exists, using existing ID`);
+          newIngredients.push({
+            ...ing,
+            ingredientId: duplicate.id,
+            matched: true
+          });
+          continue;
+        }
+
+        // Use AI to categorize the ingredient
+        let category = 'Other'; // Default fallback
+        try {
+          const { data: categoryData, error: categoryError } = await supabase.functions.invoke('categorize-ingredient', {
+            body: { ingredientName: ing.ingredientName }
+          });
+
+          if (!categoryError && categoryData.success) {
+            category = categoryData.category;
+            console.log(`AI categorized "${ing.ingredientName}" as "${category}" (cost: $${categoryData.metadata.estimatedCost.toFixed(6)})`);
+          } else {
+            console.warn(`Failed to categorize "${ing.ingredientName}", using default category "Other"`);
+          }
+        } catch (categoryError) {
+          console.warn(`Error categorizing "${ing.ingredientName}":`, categoryError);
+        }
+
+        // Create new ingredient if no duplicate found
+        const newId = Date.now() + Math.floor(Math.random() * 1000);
         const { data, error } = await supabase
           .from('ingredients')
-          .insert([{ 
-            id: Date.now() + Math.random(), // Temporary ID
+          .insert([{
+            id: newId,
             name: ing.ingredientName,
-            category: 'Other' // Default category
+            category: category
           }])
           .select()
           .single();
 
         if (error) {
-          console.error('Error creating ingredient:', error);
+          console.error('Error creating ingredient:', ing.ingredientName, error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
           continue;
         }
+
+        console.log(`Successfully created ingredient: "${data.name}" in category "${data.category}" with ID: ${data.id}`);
 
         newIngredients.push({
           ...ing,

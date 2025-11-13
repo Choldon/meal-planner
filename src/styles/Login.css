@@ -23,6 +23,13 @@
   text-align: center;
 }
 
+.login-emoji {
+  font-size: 48px;
+  margin-bottom: 15px;
+  display: block;
+  text-align: center;
+}
+
 .login-header h1 {
   margin: 0 0 10px 0;
   font-size: 28px;

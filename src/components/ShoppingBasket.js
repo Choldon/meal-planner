@@ -169,6 +169,16 @@ function ShoppingBasket({
           <button onClick={onClearChecked} className="btn-clear">
             Clear Checked
           </button>
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to clear ALL items from the shopping basket? This cannot be undone.')) {
+                shoppingList.forEach(item => onDeleteItem(item.id));
+              }
+            }}
+            className="btn-clear-all"
+          >
+            Clear All
+          </button>
           <button onClick={() => setShowSettings(true)} className="btn-settings">
             ⚙️ Ingredients
           </button>

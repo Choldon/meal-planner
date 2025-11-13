@@ -35,7 +35,8 @@ function Login() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>🍽️ Kit & Jess's Meal Planner</h1>
+          <div className="login-emoji">🍽️</div>
+          <h1>Kit & Jess's Meal Planner</h1>
           <p>Plan your meals, manage recipes, and sync with Google Calendar</p>
         </div>
 

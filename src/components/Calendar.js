@@ -21,7 +21,11 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
   const [editingMeal, setEditingMeal] = useState(null);
   const [recipeSearchTerm, setRecipeSearchTerm] = useState('');
   const [syncing, setSyncing] = useState(false);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(() => {
+    // Load auto-sync preference from localStorage
+    const saved = localStorage.getItem('autoSyncEnabled');
+    return saved === 'true';
+  });
   const [showSetupModal, setShowSetupModal] = useState(false);
 
   // Check if this is first time setup
@@ -270,7 +274,11 @@ function Calendar({ meals, recipes, onAddMeal, onUpdateMeal, onDeleteMeal }) {
   };
 
   const toggleAutoSync = () => {
-    setAutoSyncEnabled(!autoSyncEnabled);
+    const newValue = !autoSyncEnabled;
+    setAutoSyncEnabled(newValue);
+    // Save preference to localStorage
+    localStorage.setItem('autoSyncEnabled', newValue.toString());
+    console.log('Auto-sync', newValue ? 'enabled' : 'disabled');
   };
 
   const handleManualSync = () => {
