@@ -586,6 +586,17 @@
     font-size: 22px;
   }
 
+  /* Fix dropdown clipping on mobile */
+  .add-recipe-dropdown {
+    width: 100%;
+  }
+
+  .dropdown-menu {
+    left: 0;
+    right: 0;
+    min-width: 100%;
+  }
+
   /* Search and Filter Mobile */
   .search-filter-container {
     margin-bottom: 20px;
