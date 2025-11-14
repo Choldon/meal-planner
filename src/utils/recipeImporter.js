@@ -46,36 +46,50 @@ export async function importRecipeFromUrl(url) {
 }
 
 /**
- * Import a recipe from an image using OpenAI Vision
+ * Import a recipe from one or more images using OpenAI Vision
  *
- * @param {string} imageBase64 - Base64 encoded image data
+ * @param {string|Array} imageData - Base64 encoded image data (string) or array of image objects
  * @returns {Promise<Object>} Imported recipe data
  */
-export async function importRecipeFromImage(imageBase64) {
+export async function importRecipeFromImage(imageData) {
   try {
-    // Validate base64 string
-    if (!imageBase64 || typeof imageBase64 !== 'string') {
-      throw new Error('Invalid image data');
+    // Handle both single image (string) and multiple images (array)
+    let images;
+    if (typeof imageData === 'string') {
+      // Single image - backward compatibility
+      images = [{ data: imageData, type: 'image/jpeg', name: 'image' }];
+    } else if (Array.isArray(imageData)) {
+      // Multiple images
+      images = imageData;
+    } else {
+      throw new Error('Invalid image data format');
     }
 
-    console.log('Calling import-recipe-from-image Edge Function...');
+    // Validate all images
+    for (const img of images) {
+      if (!img.data || typeof img.data !== 'string') {
+        throw new Error('Invalid image data');
+      }
+    }
 
-    // Call the Supabase Edge Function
+    console.log(`Calling import-recipe-from-image Edge Function with ${images.length} image(s)...`);
+
+    // Call the Supabase Edge Function with all images
     const { data, error } = await supabase.functions.invoke('import-recipe-from-image', {
-      body: { imageBase64 }
+      body: { images }
     });
 
     if (error) {
       console.error('Edge function error:', error);
-      throw new Error(error.message || 'Failed to import recipe from image');
+      throw new Error(error.message || 'Failed to import recipe from image(s)');
     }
 
     if (!data.success) {
-      throw new Error(data.error || 'Failed to extract recipe data from image');
+      throw new Error(data.error || 'Failed to extract recipe data from image(s)');
     }
 
-    console.log('Recipe imported successfully from image:', data.recipe.title);
-    console.log('Cost:', data.metadata.estimatedCost);
+    console.log('Recipe imported successfully from image(s):', data.recipe.title);
+    console.log('Total cost:', data.metadata.estimatedCost);
 
     return {
       recipe: data.recipe,

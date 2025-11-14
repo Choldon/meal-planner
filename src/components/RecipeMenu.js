@@ -341,34 +341,55 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
     }
   };
 
-  const handleImageSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
+  const handleImageSelect = async (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Validate all files
+    for (const file of files) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select a valid image file (JPEG, PNG, etc.)');
+        alert('Please select valid image files (JPEG, PNG, etc.)\n\nNote: PDF support is coming soon! For now, please take screenshots of PDF pages or convert them to images.');
+        event.target.value = '';
         return;
       }
 
-      // Validate file size (max 10MB)
+      // Validate file size (max 10MB per file)
       if (file.size > 10 * 1024 * 1024) {
-        alert('Image size must be less than 10MB');
+        alert(`File "${file.name}" is too large. Each file must be less than 10MB`);
+        event.target.value = '';
         return;
       }
-
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result.split(',')[1];
-        setImageData(base64String);
-        setImportMode('image');
-        setShowImportModal(true);
-      };
-      reader.onerror = () => {
-        alert('Failed to read image file');
-      };
-      reader.readAsDataURL(file);
     }
+
+    try {
+      // Convert all files to base64
+      const base64Files = await Promise.all(
+        files.map(file => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64String = reader.result.split(',')[1];
+              resolve({
+                data: base64String,
+                type: file.type,
+                name: file.name
+              });
+            };
+            reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
+      // Set the image data (array of base64 strings)
+      setImageData(base64Files);
+      setImportMode('image');
+      setShowImportModal(true);
+    } catch (error) {
+      alert(error.message || 'Failed to read files');
+    }
+
     // Reset file input
     event.target.value = '';
   };
@@ -431,6 +452,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         style={{ display: 'none' }}
         onChange={handleImageSelect}
       />
@@ -948,6 +970,7 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   <li>📱 <strong>Screenshots</strong> - Recipe screenshots from websites or apps</li>
                   <li>✍️ <strong>Handwritten Recipes</strong> - Clear handwritten recipe cards</li>
                   <li>🖨️ <strong>Printed Recipes</strong> - Printed recipe sheets</li>
+                  <li>📸 <strong>Multiple Images</strong> - Select multiple images to combine into one recipe</li>
                 </ul>
               </div>
 
@@ -957,12 +980,14 @@ function RecipeMenu({ recipes, ingredients, onAddRecipe, onUpdateRecipe, onDelet
                   <li>Ensure text is clear and readable</li>
                   <li>Good lighting helps with accuracy</li>
                   <li>Include the full recipe in the image</li>
-                  <li>Supported formats: JPEG, PNG (max 10MB)</li>
+                  <li><strong>Multi-page support:</strong> Select multiple images to combine into one recipe</li>
+                  <li>Supported formats: JPEG, PNG, GIF, WebP (max 10MB per file)</li>
+                  <li><strong>PDF Note:</strong> For PDFs, take screenshots of each page and upload them as images</li>
                 </ul>
               </div>
 
               <div className="cost-info">
-                <p>💰 <strong>Cost:</strong> ~$0.002-0.03 per image (less than 3 cents!)</p>
+                <p>💰 <strong>Cost:</strong> ~$0.002-0.03 per image (less than 3 cents each!)</p>
               </div>
             </div>
 
